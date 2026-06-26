@@ -1,0 +1,29 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "trading-chart-1",
+      "description": "Candlestick charts on a dark interface",
+      "imageUrl": "https://picsum.photos/seed/trading1/800/600",
+      "imageHint": "trading chart"
+    },
+    {
+      "id": "digital-assets-1",
+      "description": "Abstract digital trading visualization",
+      "imageUrl": "https://picsum.photos/seed/trading2/800/600",
+      "imageHint": "stock market"
+    },
+    {
+      "id": "user-avatar-1",
+      "description": "Trader profile picture",
+      "imageUrl": "https://picsum.photos/seed/avatar1/200/200",
+      "imageHint": "person portrait"
+    },
+    {
+      "id": "user-avatar-2",
+      "description": "Top performing trader profile",
+      "imageUrl": "https://picsum.photos/seed/avatar2/200/200",
+      "imageHint": "woman portrait"
+    }
+  ]
+}
