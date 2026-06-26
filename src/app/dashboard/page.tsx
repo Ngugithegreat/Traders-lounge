@@ -24,9 +24,13 @@ export default function DashboardHome() {
   const [account, setAccount] = useState('');
   const [transactions, setTransactions] = useState<any[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
-  const [quote] = useState(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+  const [quote, setQuote] = useState('');
   const [loading, setLoading] = useState(true);
   const [isVirtual, setIsVirtual] = useState(false);
+
+  useEffect(() => {
+    setQuote(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+  }, []);
 
   const load = useCallback(async (acct: string) => {
     try {
@@ -57,7 +61,6 @@ export default function DashboardHome() {
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* Hero greeting */}
       <div style={{ ...card, padding: '28px 28px 24px', background: 'linear-gradient(135deg, rgba(0,230,122,0.06) 0%, rgba(13,14,26,0) 60%)', border: '1px solid rgba(0,230,122,0.1)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, rgba(0,230,122,0.08), transparent 70%)' }} />
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -88,7 +91,6 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Quick actions */}
       <div>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#475569', marginBottom: 12 }}>Quick Actions</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 14 }}>
@@ -105,7 +107,6 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* Open positions */}
       {contracts.length > 0 && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -142,7 +143,6 @@ export default function DashboardHome() {
         </div>
       )}
 
-      {/* Recent transactions */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <span style={{ fontFamily: 'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 15 }}>Recent Transactions</span>
