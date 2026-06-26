@@ -1,68 +1,85 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 220 30% 7%;
-    --foreground: 0 0% 100%;
-    --card: 220 30% 12%;
-    --card-foreground: 0 0% 100%;
-    --popover: 220 30% 10%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 158 100% 44%;
-    --primary-foreground: 220 30% 7%;
-    --secondary: 220 30% 15%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 220 30% 15%;
-    --muted-foreground: 220 10% 70%;
-    --accent: 158 100% 44%;
-    --accent-foreground: 158 100% 44%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 30% 20%;
-    --input: 220 30% 20%;
-    --ring: 158 100% 44%;
-    --radius: 1rem;
-  }
+@theme {
+  --color-background: hsl(220 30% 7%);
+  --color-foreground: hsl(210 40% 96%);
+  --color-card: hsl(220 28% 10%);
+  --color-primary: hsl(158 100% 44%);
+  --color-primary-foreground: hsl(220 30% 7%);
+  --color-secondary: hsl(220 28% 14%);
+  --color-secondary-foreground: hsl(210 40% 96%);
+  --color-muted: hsl(220 28% 14%);
+  --color-muted-foreground: hsl(215 20% 55%);
+  --color-destructive: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-warning: hsl(38 92% 50%);
+  --color-warning-foreground: hsl(0 0% 100%);
+  --color-border: hsl(220 28% 16%);
+  --color-input: hsl(220 28% 12%);
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
 }
 
-@layer components {
-  .glass-card {
-    @apply bg-card border border-white/5 backdrop-blur-md shadow-xl;
-  }
-  
-  .neon-glow {
-    @apply shadow-[0_0_15px_rgba(0,255,163,0.3)];
-  }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .font-headline {
-    font-family: 'Space Grotesk', sans-serif;
-  }
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground selection:bg-primary selection:text-primary-foreground;
-  }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-headline;
-  }
+html { scroll-behavior: smooth; }
+
+h1, h2, h3, .font-display { font-family: var(--font-display); }
+
+.glass {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+.glass-bright {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.13);
+}
+.glow-green { box-shadow: 0 0 32px rgba(0,230,130,0.25); }
+.glow-green-sm { box-shadow: 0 0 14px rgba(0,230,130,0.18); }
+
+.ticker-wrap { overflow: hidden; white-space: nowrap; }
+.ticker-track { display: inline-flex; gap: 48px; animation: ticker 40s linear infinite; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+.slide-up { animation: slideUp 0.4s ease-out both; }
+.fade-in  { animation: fadeIn 0.5s ease-out both; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+
+.pulse-green { animation: pulseGreen 2s ease-in-out infinite; }
+@keyframes pulseGreen {
+  0%,100% { box-shadow: 0 0 0 0 rgba(0,230,130,0.4); }
+  50%      { box-shadow: 0 0 0 8px rgba(0,230,130,0); }
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+  font-weight: 600; border-radius: 12px; border: none;
+  cursor: pointer; text-decoration: none;
+  transition: opacity 0.15s, transform 0.1s;
 }
+.btn-primary:hover { opacity: 0.88; }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
-::-webkit-scrollbar-track {
-  @apply bg-transparent;
+.btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--color-foreground);
+  font-weight: 500; border-radius: 12px;
+  cursor: pointer; text-decoration: none;
+  transition: background 0.15s;
 }
-
-::-webkit-scrollbar-thumb {
-  @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
-}
+.btn-ghost:hover { background: rgba(255,255,255,0.10); }

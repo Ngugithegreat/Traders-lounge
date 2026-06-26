@@ -1,183 +1,173 @@
-"use client";
+'use client';
+import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 
-import { MarketTicker } from "@/components/dashboard/market-ticker";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Activity, 
-  Wallet, 
-  History, 
-  TrendingUp,
-  Play,
-  Pause
-} from "lucide-react";
-
-const data = [
-  { time: '09:00', pl: 400 },
-  { time: '10:00', pl: 300 },
-  { time: '11:00', pl: 600 },
-  { time: '12:00', pl: 800 },
-  { time: '13:00', pl: 700 },
-  { time: '14:00', pl: 1100 },
-  { time: '15:00', pl: 1540 },
+const QUOTES = [
+  '"Risk comes from not knowing what you\'re doing." — Warren Buffett',
+  '"The trend is your friend until the end where it bends." — Ed Seykota',
+  '"In trading, the impossible happens about twice a year." — Henri M. Simoes',
+  '"Markets are never wrong — opinions often are." — Jesse Livermore',
+  '"Cut your losses short and let your profits run." — David Ricardo',
 ];
 
-export default function DashboardPage() {
+const ACTIONS = [
+  { href: '/dashboard/free-bots', icon: '⚡', title: 'Free Bots', desc: 'Browse ready-made trading strategies', grad: 'rgba(0,230,130,0.08)', border: 'rgba(0,230,130,0.2)' },
+  { href: '/dashboard/bot-builder', icon: '🤖', title: 'Bot Builder', desc: 'Build a custom bot with visual editor', grad: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.2)' },
+  { href: '/dashboard/charts', icon: '📊', title: 'Live Charts', desc: 'Professional TradingView charts', grad: 'rgba(168,85,247,0.08)', border: 'rgba(168,85,247,0.2)' },
+  { href: '#', icon: '📋', title: 'Copy Trading', desc: 'Follow top traders automatically', grad: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)', soon: true },
+];
+
+const card: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 16, backdropFilter: 'blur(16px)' };
+
+export default function DashboardHome() {
+  const [name, setName] = useState('');
+  const [account, setAccount] = useState('');
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
+  const [quote] = useState(QUOTES[Math.floor(Math.random() * QUOTES.length)]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async (acct: string) => {
+    try {
+      const [txR, pR] = await Promise.all([
+        fetch(`/api/deriv/statement?account=${acct}&limit=10`),
+        fetch(`/api/deriv/portfolio?account=${acct}`),
+      ]);
+      const tx = await txR.json();
+      const p = await pR.json();
+      if (tx.success) setTransactions(tx.transactions || []);
+      if (p.success) setContracts(p.contracts || []);
+    } catch (_) {}
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    const acct = localStorage.getItem('tl_account') || '';
+    setAccount(acct);
+    setName((localStorage.getItem('tl_name') || acct).split(' ')[0]);
+    if (acct) load(acct);
+  }, [load]);
+
+  const totalPnl = contracts.reduce((s, c) => s + parseFloat(c.profit_loss || '0'), 0);
+
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-background">
-      <MarketTicker />
-      
-      <main className="flex-1 overflow-y-auto p-6 space-y-6">
-        <header className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Executive Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, trader. Your bots are performing optimally.</p>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="border-white/10 hover:bg-white/5">
-              <History className="mr-2 h-4 w-4" />
-              Full History
-            </Button>
-            <Button className="neon-glow font-bold">
-              <TrendingUp className="mr-2 h-4 w-4" />
-              Analyze Markets
-            </Button>
-          </div>
-        </header>
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Equity</CardTitle>
-              <Wallet className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">$12,450.00</div>
-              <div className="flex items-center text-xs text-primary mt-1 font-bold">
-                <ArrowUpRight className="h-3 w-3 mr-1" />
-                +14.2% from yesterday
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Net P&L (Today)</CardTitle>
-              <Activity className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">+$1,540.24</div>
-              <Progress value={75} className="h-1.5 mt-3" />
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Active Bots</CardTitle>
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">03</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Optimized for Boom/Crash
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Market Status</CardTitle>
-              <Badge variant="outline" className="text-[10px] border-primary text-primary bg-primary/5 uppercase tracking-wider font-bold">Open</Badge>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">Vol. High</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Optimal for Scalping
-              </p>
-            </CardContent>
-          </Card>
+      {/* Greeting */}
+      <div style={{ ...card, padding: 24, background: 'linear-gradient(135deg,rgba(0,230,130,0.06),rgba(0,0,0,0))', border: '1px solid rgba(0,230,130,0.12)' }}>
+        <h1 className="font-display" style={{ fontSize: 28, fontWeight: 800, marginBottom: 6 }}>Hello {name} 👋</h1>
+        <p style={{ color: 'hsl(215 20% 55%)', fontStyle: 'italic', fontSize: 14, maxWidth: 560 }}>{quote}</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: 14, marginTop: 20 }}>
+          {[
+            { label: 'Open Positions', value: contracts.length, color: '#818cf8' },
+            { label: 'Unrealised P&L', value: `${totalPnl >= 0 ? '+' : ''}$${totalPnl.toFixed(2)}`, color: totalPnl >= 0 ? '#34d399' : '#f87171' },
+            { label: 'Recent Trades', value: transactions.length, color: '#a78bfa' },
+            { label: 'Status', value: 'Live', color: '#34d399' },
+          ].map((s, i) => (
+            <div key={i} style={{ background: 'rgba(0,0,0,0.25)', borderRadius: 12, padding: '14px 16px' }}>
+              <div style={{ fontSize: 12, color: 'hsl(215 20% 55%)', marginBottom: 4 }}>{s.label}</div>
+              <div className="font-display" style={{ fontSize: 22, fontWeight: 700, color: s.color }}>{loading ? '...' : s.value}</div>
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Performance & Active Bots */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 glass-card">
-            <CardHeader>
-              <CardTitle>Session Performance</CardTitle>
-              <CardDescription>Live equity curve for current trading session.</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data}>
-                  <defs>
-                    <linearGradient id="colorPl" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(158, 100%, 44%)" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="hsl(158, 100%, 44%)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-                  <XAxis 
-                    dataKey="time" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{fill: 'rgba(255,255,255,0.4)', fontSize: 12}}
-                  />
-                  <YAxis 
-                    hide 
-                  />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'hsl(220, 30%, 10%)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
-                    itemStyle={{ color: 'hsl(158, 100%, 44%)' }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="pl" 
-                    stroke="hsl(158, 100%, 44%)" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorPl)" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle>Active Strategy Status</CardTitle>
-              <CardDescription>Monitor your automated systems.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {[
-                { name: "Boom Hunter v2", status: "running", pl: "+$420.20", color: "text-primary" },
-                { name: "Vol-Spike Scalper", status: "running", pl: "-$12.50", color: "text-destructive" },
-                { name: "Crash Safety Bot", status: "paused", pl: "+$1,132.00", color: "text-primary" }
-              ].map((bot) => (
-                <div key={bot.name} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group transition-all hover:bg-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-md ${bot.status === 'running' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                      {bot.status === 'running' ? <Play size={14} /> : <Pause size={14} />}
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold">{bot.name}</div>
-                      <div className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest">{bot.status}</div>
-                    </div>
-                  </div>
-                  <div className={`text-sm font-mono font-bold ${bot.color}`}>{bot.pl}</div>
-                </div>
-              ))}
-              <Button variant="outline" className="w-full mt-2 border-dashed border-white/20 hover:border-primary/50 text-muted-foreground hover:text-primary">
-                + Deploy New Bot
-              </Button>
-            </CardContent>
-          </Card>
+      {/* Quick Actions */}
+      <div>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'hsl(215 20% 55%)', marginBottom: 14 }}>Quick Actions</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 16 }}>
+          {ACTIONS.map((a, i) => (
+            <Link key={i} href={a.href} style={{ ...card, padding: 22, background: a.grad, border: `1px solid ${a.border}`, textDecoration: 'none', color: 'inherit', display: 'block', position: 'relative', transition: 'transform 0.18s' }}
+              onMouseEnter={e => { if (!a.soon) (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}>
+              {a.soon && <span style={{ position: 'absolute', top: 12, right: 12, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: 'hsl(38 92% 50%)', border: '1px solid rgba(245,158,11,0.2)' }}>SOON</span>}
+              <div style={{ fontSize: 30, marginBottom: 12 }}>{a.icon}</div>
+              <div className="font-display" style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>{a.title}</div>
+              <div style={{ fontSize: 13, color: 'hsl(215 20% 55%)', lineHeight: 1.5 }}>{a.desc}</div>
+              {!a.soon && <div style={{ color: 'hsl(158 100% 44%)', fontSize: 13, fontWeight: 600, marginTop: 12 }}>Open →</div>}
+            </Link>
+          ))}
         </div>
-      </main>
+      </div>
+
+      {/* Open positions */}
+      {contracts.length > 0 && (
+        <div>
+          <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', display: 'inline-block' }} className="pulse-green" />
+            Open Positions ({contracts.length})
+          </p>
+          <div style={{ ...card, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    {['Contract ID','Symbol','Type','Stake','P&L'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, color: 'hsl(215 20% 55%)', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {contracts.map((c, i) => {
+                    const pnl = parseFloat(c.profit_loss || '0');
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontSize: 11, color: 'hsl(215 20% 55%)' }}>{c.contract_id}</td>
+                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>{c.underlying}</td>
+                        <td style={{ padding: '12px 16px' }}><span style={{ padding: '3px 10px', borderRadius: 999, fontSize: 11, background: 'rgba(0,230,130,0.1)', color: 'hsl(158 100% 44%)' }}>{c.contract_type}</span></td>
+                        <td style={{ padding: '12px 16px' }}>{parseFloat(c.buy_price || '0').toFixed(2)}</td>
+                        <td style={{ padding: '12px 16px', fontWeight: 700, color: pnl >= 0 ? '#34d399' : '#f87171' }}>{pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent transactions */}
+      <div>
+        <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>Recent Transactions</p>
+        {loading ? (
+          <div style={{ ...card, padding: 40, textAlign: 'center', color: 'hsl(215 20% 55%)', fontSize: 14 }}>Loading...</div>
+        ) : transactions.length === 0 ? (
+          <div style={{ ...card, padding: 48, textAlign: 'center' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+            <p style={{ color: 'hsl(215 20% 55%)', fontSize: 14, marginBottom: 20 }}>No transactions yet. Run your first bot to get started.</p>
+            <Link href="/dashboard/free-bots" className="btn-primary" style={{ padding: '12px 28px', fontSize: 14 }}>Browse Free Bots</Link>
+          </div>
+        ) : (
+          <div style={{ ...card, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    {['Time','Description','Action','Amount','Balance After'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '12px 16px', fontSize: 11, color: 'hsl(215 20% 55%)', fontWeight: 600 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.map((tx: any, i: number) => {
+                    const amt = parseFloat(tx.amount || '0');
+                    return (
+                      <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                        <td style={{ padding: '11px 16px', fontSize: 11, color: 'hsl(215 20% 55%)', whiteSpace: 'nowrap' }}>{new Date((tx.transaction_time || 0) * 1000).toLocaleString()}</td>
+                        <td style={{ padding: '11px 16px', fontSize: 11, color: 'hsl(215 20% 55%)', maxWidth: 200 }}><span style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tx.longcode || tx.shortcode || '—'}</span></td>
+                        <td style={{ padding: '11px 16px' }}><span style={{ padding: '3px 8px', borderRadius: 999, fontSize: 10, background: 'rgba(255,255,255,0.05)', color: 'hsl(215 20% 55%)' }}>{tx.action_type || '—'}</span></td>
+                        <td style={{ padding: '11px 16px', fontWeight: 700, color: amt >= 0 ? '#34d399' : '#f87171' }}>{amt >= 0 ? '+' : ''}{amt.toFixed(2)}</td>
+                        <td style={{ padding: '11px 16px' }}>{parseFloat(tx.balance_after || '0').toFixed(2)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
