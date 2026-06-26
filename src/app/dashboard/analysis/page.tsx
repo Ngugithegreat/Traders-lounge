@@ -19,7 +19,6 @@ export default function AnalysisPage() {
   const [tradeType, setTradeType] = useState('DIGITEVEN');
   const [numTicks, setNumTicks] = useState(1000);
   const [stake, setStake] = useState(0.5);
-  const [noTrades, setNoTrades] = useState(1);
   const [ticks, setTicks] = useState<number[]>([]);
   const [currentTick, setCurrentTick] = useState<number | null>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -36,8 +35,6 @@ export default function AnalysisPage() {
   const oddCount = ticks.length - evenCount;
   const evenPct = ticks.length > 0 ? (evenCount / ticks.length * 100) : 50;
   const oddPct = 100 - evenPct;
-
-  const maxCount = Math.max(...digitCounts.map(d => d.count), 1);
 
   const connect = useCallback(() => {
     if (wsRef.current) { try { wsRef.current.close(); } catch (_) {} }
@@ -190,13 +187,13 @@ export default function AnalysisPage() {
       {/* Trade controls */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
         {[['Ticks','1',true],['Stake',String(stake),true],['No. of Trades','1',true]].map(([label, val, editable], i) => (
-          <div key={label} style={{ ...card, padding: '12px 14px', textAlign: 'center' }}>
-            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{label}</div>
+          <div key={i} style={{ ...card, padding: '12px 14px', textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{String(label)}</div>
             {i === 1 ? (
               <input type="number" min={0.35} step={0.1} value={stake} onChange={e=>setStake(+e.target.value||0.5)}
                 style={{ width: '100%', background: 'none', border: 'none', color: '#e2e8f0', fontFamily: 'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 18, textAlign: 'center', outline: 'none' }} />
             ) : (
-              <div style={{ fontFamily:'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 18, color: '#e2e8f0' }}>{val}</div>
+              <div style={{ fontFamily:'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 18, color: '#e2e8f0' }}>{String(val)}</div>
             )}
           </div>
         ))}
