@@ -56,6 +56,7 @@ function CallbackContent() {
         localStorage.setItem('tl_token', chosen.token);
         localStorage.setItem('tl_name', authData.fullname || '');
         localStorage.setItem('tl_virtual', String(chosen.is_virtual));
+        localStorage.setItem('tl_all_accounts', JSON.stringify(enriched));
         router.replace('/dashboard');
       } catch (e: any) {
         setError(e.message || 'Authentication failed.');
@@ -64,27 +65,29 @@ function CallbackContent() {
     run();
   }, [params, router]);
 
+  const S: React.CSSProperties = { minHeight: '100vh', background: '#0d0e1a', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24, fontFamily: 'Inter,sans-serif', color: '#e2e8f0' };
+
   if (error) return (
-    <div style={{ minHeight: '100vh', background: 'hsl(220 30% 7%)', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 24 }}>
+    <div style={S}>
       <div>
         <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-        <h2 style={{ fontFamily: 'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 22, color: 'hsl(210 40% 96%)', marginBottom: 12 }}>Connection failed</h2>
-        <p style={{ color: 'hsl(215 20% 55%)', marginBottom: 24 }}>{error}</p>
-        <a href="/" className="btn-primary" style={{ padding: '12px 28px', fontSize: 15 }}>Try Again</a>
+        <h2 style={{ fontFamily: 'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 22, marginBottom: 12 }}>Connection failed</h2>
+        <p style={{ color: '#64748b', marginBottom: 24, fontSize: 14 }}>{error}</p>
+        <a href="/" style={{ padding: '12px 28px', background: '#00e67a', color: '#0a0b14', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: 15 }}>Try Again</a>
       </div>
     </div>
   );
 
   return (
-    <div style={{ minHeight: '100vh', background: 'hsl(220 30% 7%)', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+    <div style={S}>
       <div>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(0,230,130,0.15)', border: '1px solid rgba(0,230,130,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-          <div style={{ width: 28, height: 28, border: '2.5px solid hsl(158 100% 44%)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(0,230,122,0.12)', border: '1px solid rgba(0,230,122,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <div style={{ width: 26, height: 26, border: '2.5px solid #00e67a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         </div>
-        <h2 style={{ fontFamily: 'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 20, color: 'hsl(210 40% 96%)', marginBottom: 8 }}>Connecting your account</h2>
-        <p style={{ color: 'hsl(215 20% 55%)', fontSize: 14 }}>Verifying with Deriv...</p>
+        <h2 style={{ fontFamily: 'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 20, marginBottom: 8 }}>Connecting your account</h2>
+        <p style={{ color: '#64748b', fontSize: 14 }}>Verifying with Deriv...</p>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
 }
