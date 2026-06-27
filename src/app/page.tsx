@@ -39,6 +39,16 @@ export default function LandingPage() {
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', fn);
+
+    // Initialize AbePay widget
+    if (typeof (window as any).AbePay !== 'undefined') {
+      (window as any).AbePay.init({
+        ref: 'partner1',
+        mountId: 'abepay-nav',
+        powered: true,
+      });
+    }
+
     return () => window.removeEventListener('scroll', fn);
   }, []);
 
@@ -80,6 +90,7 @@ export default function LandingPage() {
             <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 17 }}>Traders Lounge</span>
           </div>
           <nav style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div id="abepay-nav"></div>
             {[['#features','Features'],['#how-it-works','How It Works'],['#testimonials','Traders']].map(([href, label]) => (
               <a key={href} href={href} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 14, fontWeight: 500, color: 'hsl(215 20% 55%)', textDecoration: 'none', transition: 'color 0.15s' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'hsl(210 40% 96%)')}
@@ -151,7 +162,7 @@ export default function LandingPage() {
             <h2 className="font-display" style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 800, marginBottom: 16 }}>Built for serious traders</h2>
             <p style={{ color: 'hsl(215 20% 55%)', fontSize: 17, maxWidth: 500, margin: '0 auto' }}>Every tool to automate, analyze, and execute — all in one dashboard.</p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 20 }}>
+          <div style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', display: 'grid', gap: 20 }}>
             {FEATURES.map((f, i) => (
               <div key={i} style={{ position: 'relative', background: f.grad, border: `1px solid ${f.border}`, borderRadius: 20, padding: 28, transition: 'transform 0.2s', cursor: 'default' }}
                 onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
