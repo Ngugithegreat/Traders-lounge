@@ -50,15 +50,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     fetchBal(acct);
     const iv = setInterval(() => fetchBal(acct), 30000);
 
-    // Initial check for AbePay
-    if (typeof (window as any).AbePay !== 'undefined') {
-      (window as any).AbePay.init({
-        ref: 'partner1',
-        mountId: 'abepay-nav',
-        powered: true,
-      });
-    }
-
     return () => clearInterval(iv);
   }, [router, fetchBal, pathname]);
 
@@ -105,6 +96,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <div id="abepay-nav" />
+            <script dangerouslySetInnerHTML={{ __html: `
+              (function tryInit(n) {
+                if (window.AbePay) {
+                  window.AbePay.init({ ref: 'partner1', mountId: 'abepay-nav', powered: true });
+                } else if (n < 20) {
+                  setTimeout(function() { tryInit(n + 1); }, 300);
+                }
+              })(0);
+            `}} />
             {isVirtual && (
               <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>DEMO</span>
             )}
@@ -209,14 +209,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
 
       <style>{`.hide-scrollbar::-webkit-scrollbar{display:none}.hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none}`}</style>
-      <script src="https://app.abepayy.com/widget/abepay-inline.js" async></script>
-      <script dangerouslySetInnerHTML={{ __html: `
-        window.addEventListener('load', function() {
-          if (window.AbePay) {
-            AbePay.init({ ref: 'partner1', mountId: 'abepay-nav', powered: true });
-          }
-        });
-      `}} />
     </div>
   );
 }
