@@ -96,15 +96,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <div id="abepay-nav" />
-            <script dangerouslySetInnerHTML={{ __html: `
-              (function tryInit(n) {
-                if (window.AbePay) {
-                  window.AbePay.init({ ref: 'partner1', mountId: 'abepay-nav', powered: true });
-                } else if (n < 20) {
-                  setTimeout(function() { tryInit(n + 1); }, 300);
-                }
-              })(0);
-            `}} />
             {isVirtual && (
               <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>DEMO</span>
             )}
