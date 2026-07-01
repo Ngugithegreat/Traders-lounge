@@ -1,9 +1,2 @@
 {
-  "functions": {
-    "app/api/deriv/balance/route.ts": { "maxDuration": 30 },
-    "app/api/deriv/portfolio/route.ts": { "maxDuration": 30 },
-    "app/api/deriv/statement/route.ts": { "maxDuration": 30 },
-    "app/api/deriv/buy/route.ts": { "maxDuration": 30 },
-    "app/api/auth/save-session/route.ts": { "maxDuration": 20 }
-  }
 }
