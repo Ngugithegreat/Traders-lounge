@@ -3,15 +3,19 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 
-const NAV = [
+type NavItem = { href: string; label: string; icon: string; exact?: boolean; soon?: boolean };
+
+const NAV: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: '🏠', exact: true },
   { href: '/dashboard/bot-builder', label: 'Bot Builder', icon: '🤖' },
   { href: '/dashboard/free-bots', label: 'Free Bots', icon: '⚡' },
+  { href: '/dashboard/signals', label: 'Signals', icon: '📡' },
   { href: '/dashboard/analysis', label: 'Analysis Tool', icon: '🔍' },
   { href: '/dashboard/manual-trader', label: 'Manual Trader', icon: '✍️' },
   { href: '/dashboard/charts', label: 'Charts', icon: '📊' },
-  { href: '/dashboard/copy-trading', label: 'Copy Trading', icon: '📋', soon: true },
-  { href: '/dashboard/speedbot', label: 'Speedbot', icon: '🚀', soon: true },
+  { href: '/dashboard/copy-trading', label: 'Copy Trading', icon: '📋' },
+  { href: '/dashboard/speedbot', label: 'Speedbot', icon: '🚀' },
+  { href: '/dashboard/ai-software', label: 'AI Software', icon: '🧠' },
   { href: '/dashboard/reports', label: 'Reports', icon: '📈' },
 ];
 
