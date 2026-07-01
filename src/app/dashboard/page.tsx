@@ -13,6 +13,8 @@ const QUOTES = [
 const QUICK_ACTIONS = [
   { href: '/dashboard/bot-builder', icon: '🤖', title: 'Bot Builder', desc: 'Build a custom bot with the visual editor', color: '#6366f1', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.2)' },
   { href: '/dashboard/free-bots', icon: '⚡', title: 'Free Bots', desc: 'Browse ready-made trading strategies', color: '#00e67a', bg: 'rgba(0,230,122,0.08)', border: 'rgba(0,230,122,0.2)' },
+  { href: '/dashboard/signals', icon: '📡', title: 'Trading Signals', desc: 'Live technical signals with confidence', color: '#a855f7', bg: 'rgba(168,85,247,0.08)', border: 'rgba(168,85,247,0.2)' },
+  { href: '/dashboard/copy-trading', icon: '📋', title: 'Copy Trading', desc: 'Auto-mirror top traders in real time', color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)' },
   { href: '/dashboard/analysis', icon: '🔍', title: 'Analysis Tool', desc: 'Live digit stats and market analysis', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
   { href: '/dashboard/manual-trader', icon: '✍️', title: 'Manual Trader', desc: 'Place trades manually with live charts', color: '#06b6d4', bg: 'rgba(6,182,212,0.08)', border: 'rgba(6,182,212,0.2)' },
 ];

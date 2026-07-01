@@ -20,10 +20,10 @@ const TICKER = [
 const FEATURES = [
   { icon: '🤖', title: 'Bot Builder', desc: 'Build automated bots with a visual editor. Set stake, duration, martingale, take profit and stop loss — no coding needed.', grad: 'linear-gradient(135deg,rgba(0,230,130,.12),rgba(0,180,100,.06))', border: 'rgba(0,230,130,.2)' },
   { icon: '⚡', title: 'Free Bots', desc: 'Browse our library of ready-to-run strategies for Boom/Crash, Volatility, and Digit indices.', grad: 'linear-gradient(135deg,rgba(99,102,241,.12),rgba(79,70,229,.06))', border: 'rgba(99,102,241,.2)' },
-  { icon: '📊', title: 'Live Charts', desc: 'Full TradingView charts with 100+ indicators, all Deriv synthetic pairs, multiple timeframes.', grad: 'linear-gradient(135deg,rgba(168,85,247,.12),rgba(139,92,246,.06))', border: 'rgba(168,85,247,.2)' },
-  { icon: '📋', title: 'Copy Trading', desc: 'Follow and auto-copy top-performing traders in real time. Set risk limits per trader.', grad: 'linear-gradient(135deg,rgba(249,115,22,.12),rgba(239,68,68,.06))', border: 'rgba(249,115,22,.2)', soon: true },
-  { icon: '🧠', title: 'AI Software', desc: 'AI-powered market analysis and smart trade signals based on live synthetic index data.', grad: 'linear-gradient(135deg,rgba(6,182,212,.12),rgba(14,165,233,.06))', border: 'rgba(6,182,212,.2)', soon: true },
-  { icon: '🚀', title: 'Speedbot', desc: 'Ultra-fast execution engine for high-frequency synthetic index trading with sub-second response.', grad: 'linear-gradient(135deg,rgba(234,179,8,.12),rgba(245,158,11,.06))', border: 'rgba(234,179,8,.2)', soon: true },
+  { icon: '📡', title: 'Trading Signals', desc: 'Live technical signals across every synthetic index — EMA crossover, RSI and momentum with confidence scores.', grad: 'linear-gradient(135deg,rgba(168,85,247,.12),rgba(139,92,246,.06))', border: 'rgba(168,85,247,.2)' },
+  { icon: '📋', title: 'Copy Trading', desc: 'Follow and auto-copy top-performing traders in real time. Set risk limits per trader.', grad: 'linear-gradient(135deg,rgba(249,115,22,.12),rgba(239,68,68,.06))', border: 'rgba(249,115,22,.2)' },
+  { icon: '🧠', title: 'AI Software', desc: 'Smart engine that scans all markets live and surfaces the strongest opportunity with a confidence score.', grad: 'linear-gradient(135deg,rgba(6,182,212,.12),rgba(14,165,233,.06))', border: 'rgba(6,182,212,.2)' },
+  { icon: '🚀', title: 'Speedbot', desc: 'Ultra-fast automated execution loop with martingale recovery, take-profit and stop-loss guards.', grad: 'linear-gradient(135deg,rgba(234,179,8,.12),rgba(245,158,11,.06))', border: 'rgba(234,179,8,.2)' },
 ];
 
 const TESTIMONIALS = [
@@ -167,9 +167,6 @@ export default function LandingPage() {
               <div key={i} style={{ position: 'relative', background: f.grad, border: `1px solid ${f.border}`, borderRadius: 20, padding: 28, transition: 'transform 0.2s', cursor: 'default' }}
                 onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.02)')}
                 onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}>
-                {f.soon && (
-                  <span style={{ position: 'absolute', top: 16, right: 16, fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: 'rgba(245,158,11,0.15)', color: 'hsl(38 92% 50%)', border: '1px solid rgba(245,158,11,0.3)' }}>SOON</span>
-                )}
                 <div style={{ fontSize: 32, marginBottom: 16 }}>{f.icon}</div>
                 <h3 className="font-display" style={{ fontWeight: 700, fontSize: 18, marginBottom: 10 }}>{f.title}</h3>
                 <p style={{ color: 'hsl(215 20% 55%)', fontSize: 14, lineHeight: 1.65 }}>{f.desc}</p>
