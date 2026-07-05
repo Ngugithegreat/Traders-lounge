@@ -2,14 +2,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 const SYMBOLS = [
-  ['R_100','Volatility 100 Index'],['R_75','Volatility 75 Index'],['R_50','Volatility 50 Index'],
-  ['R_25','Volatility 25 Index'],['R_10','Volatility 10 (1s) Index'],['STPIDX','Step Index'],
-  ['BOOM1000','Boom 1000 Index'],['CRASH1000','Crash 1000 Index'],['RDBULL','Bull Market Index'],['RDBEAR','Bear Market Index'],
+  ['R_100', 'Volatility 100 Index'], ['R_75', 'Volatility 75 Index'], ['R_50', 'Volatility 50 Index'],
+  ['R_25', 'Volatility 25 Index'], ['R_10', 'Volatility 10 (1s) Index'], ['STPIDX', 'Step Index'],
+  ['BOOM1000', 'Boom 1000 Index'], ['CRASH1000', 'Crash 1000 Index'], ['RDBULL', 'Bull Market Index'], ['RDBEAR', 'Bear Market Index'],
 ];
 
 const TRADE_TYPES = [
-  ['DIGITEVEN','Even/Odd'],['DIGITOVER','Over/Under'],['DIGITMATCH','Matches/Differs'],
-  ['CALL','Rise/Fall'],['DIGITODD','Odd'],
+  ['DIGITEVEN', 'Even/Odd'], ['DIGITOVER', 'Over/Under'], ['DIGITMATCH', 'Matches/Differs'],
+  ['CALL', 'Rise/Fall'], ['DIGITODD', 'Odd'],
 ];
 
 const APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID || '33BguwaY1RGDz9J48qvkJ';
@@ -37,7 +37,7 @@ export default function AnalysisPage() {
   const oddPct = 100 - evenPct;
 
   const connect = useCallback(() => {
-    if (wsRef.current) { try { wsRef.current.close(); } catch (_) {} }
+    if (wsRef.current) { try { wsRef.current.close(); } catch (_) { } }
     setTicks([]); setCurrentTick(null); setIsRunning(true);
     const ws = new WebSocket(`wss://ws.derivws.com/websockets/v3?app_id=${APP_ID}`);
     wsRef.current = ws;
@@ -57,7 +57,7 @@ export default function AnalysisPage() {
     ws.onerror = () => setIsRunning(false);
   }, [symbol, numTicks]);
 
-  useEffect(() => { connect(); return () => { try { wsRef.current?.close(); } catch (_) {} }; }, [connect]);
+  useEffect(() => { connect(); return () => { try { wsRef.current?.close(); } catch (_) { } }; }, [connect]);
 
   useEffect(() => {
     setTicks([]);
@@ -98,13 +98,13 @@ export default function AnalysisPage() {
         <div>
           <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Market</div>
           <select value={symbol} onChange={e => setSymbol(e.target.value)} style={selStyle}>
-            {SYMBOLS.map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+            {SYMBOLS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
         <div>
           <div style={{ fontSize: 11, color: '#475569', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 7 }}>Trade Type</div>
           <select value={tradeType} onChange={e => setTradeType(e.target.value)} style={selStyle}>
-            {TRADE_TYPES.map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+            {TRADE_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
       </div>

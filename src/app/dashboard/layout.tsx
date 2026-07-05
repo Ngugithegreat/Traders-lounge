@@ -39,7 +39,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     const acct = localStorage.getItem('tl_account');
-    if (!acct) { router.push('/'); return; }
+    const token = localStorage.getItem('tl_token');
+    const expiresAt = localStorage.getItem('tl_token_expires');
+
+    if (!acct || !token) { router.push('/'); return; }
+
+    // Check if token is expired — if so, clear and re-auth
+    if (expiresAt && Date.now() > parseInt(expiresAt)) {
+      ['tl_account','tl_token','tl_name','tl_virtual','tl_all_accounts','tl_token_expires'].forEach(k => localStorage.removeItem(k));
+      router.push('/');
+      return;
+    }
+
     setAccount(acct);
     setName(localStorage.getItem('tl_name') || acct);
     setIsVirtual(localStorage.getItem('tl_virtual') === 'true');
@@ -49,9 +60,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } catch (_) {}
     fetchBal(acct);
     const iv = setInterval(() => fetchBal(acct), 30000);
-
     return () => clearInterval(iv);
-  }, [router, fetchBal, pathname]);
+  }, [router, fetchBal]);
 
   const switchAccount = (acct: any) => {
     localStorage.setItem('tl_account', acct.loginid);
@@ -65,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const logout = () => {
-    ['tl_account','tl_token','tl_name','tl_virtual','tl_all_accounts'].forEach(k => localStorage.removeItem(k));
+    ['tl_account','tl_token','tl_name','tl_virtual','tl_all_accounts','tl_token_expires'].forEach(k => localStorage.removeItem(k));
     router.push('/');
   };
 
@@ -95,7 +105,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <div id="abepay-nav" />
             {isVirtual && (
               <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999, background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>DEMO</span>
             )}

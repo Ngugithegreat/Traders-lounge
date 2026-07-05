@@ -52,11 +52,18 @@ function CallbackContent() {
           }),
         });
 
+        // Save to localStorage (persists across sessions)
         localStorage.setItem('tl_account', chosen.loginid);
         localStorage.setItem('tl_token', chosen.token);
         localStorage.setItem('tl_name', authData.fullname || '');
         localStorage.setItem('tl_virtual', String(chosen.is_virtual));
         localStorage.setItem('tl_all_accounts', JSON.stringify(enriched));
+        localStorage.setItem('tl_currency', chosen.currency || 'USD');
+
+        // Save expiry — token lasts 30 days, refresh after 25 days
+        const expiresAt = Date.now() + 25 * 24 * 60 * 60 * 1000;
+        localStorage.setItem('tl_token_expires', String(expiresAt));
+
         router.replace('/dashboard');
       } catch (e: any) {
         setError(e.message || 'Authentication failed.');

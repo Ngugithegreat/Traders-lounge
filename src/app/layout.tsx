@@ -16,16 +16,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         {children}
-        <script src="https://app.abepayy.com/widget/abepay-inline.js" />
-        <script dangerouslySetInnerHTML={{ __html: `
-          (function tryInit(n) {
-            if (window.AbePay) {
-              window.AbePay.init({ ref: 'partner1', mountId: 'abepay-nav', powered: true });
-            } else if (n < 30) {
-              setTimeout(function() { tryInit(n + 1); }, 200);
-            }
-          })(0);
-        `}} />
       </body>
     </html>
   );
