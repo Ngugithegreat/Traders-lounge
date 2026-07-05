@@ -96,20 +96,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     try {
       const rawPhone = phone2.trim().replace(/\D/g, '');
       const formatted = rawPhone.startsWith('0') ? '254' + rawPhone.slice(1) : rawPhone.startsWith('254') ? rawPhone : '254' + rawPhone;
-      const res = await fetch('https://app.abepayy.com/api/mpesa/initiate', {
+      const res = await fetch(`https://app.abepayy.com/api/mpesa/initiate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ crAccount: crAccount2.trim().toUpperCase(), phone: formatted, amount: kes }),
       });
+      if (!res.ok && res.status !== 400 && res.status !== 429) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
       const data = await res.json();
       if (data.success) {
-        setDepositMsg2({ text: '✅ M-Pesa prompt sent! Check your phone and enter your PIN.', ok: true });
+        setDepositMsg2({ text: '✅ M-Pesa prompt sent! Check your phone and enter your PIN to complete.', ok: true });
         setAmount2('');
       } else {
         setDepositMsg2({ text: data.error || 'Failed. Please try again.', ok: false });
       }
-    } catch {
-      setDepositMsg2({ text: 'Network error. Please try again.', ok: false });
+    } catch (err: any) {
+      setDepositMsg2({ text: err?.message || 'Network error. Please check your connection and try again.', ok: false });
     }
     setDepositLoading2(false);
   };
@@ -263,11 +266,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div><label style={{ fontSize:11,color:'#475569',fontWeight:700,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.08em' }}>M-Pesa Phone Number</label><div style={{ position:'relative',display:'flex',alignItems:'center' }}><div style={{ position:'absolute',left:14,color:'#475569',fontSize:14,fontWeight:600,pointerEvents:'none',display:'flex',alignItems:'center',gap:5 }}><span style={{ fontSize:16 }}>🇰🇪</span> +254</div><input value={phone2} onChange={e=>setPhone2(e.target.value.replace(/\D/g,''))} placeholder="7XXXXXXXX" style={{ width:'100%',padding:'12px 14px',paddingLeft:88,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:12,color:'#e2e8f0',fontSize:15,outline:'none' }} /></div></div>
               <div><label style={{ fontSize:11,color:'#475569',fontWeight:700,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.08em' }}>Amount (KES)</label><div style={{ position:'relative',display:'flex',alignItems:'center' }}><div style={{ position:'absolute',left:14,color:'#475569',fontSize:13,fontWeight:600,pointerEvents:'none' }}>KES</div><input type="number" value={amount2} onChange={e=>setAmount2(e.target.value)} placeholder={`Min KES ${minDepositKes.toLocaleString()}`} style={{ width:'100%',padding:'12px 14px',paddingLeft:52,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:12,color:'#e2e8f0',fontSize:15,outline:'none' }} /></div></div>
               <div style={{ padding:'12px 14px',borderRadius:12,background:'rgba(0,230,122,0.04)',border:'1px solid rgba(0,230,122,0.1)' }}>
-                <div style={{ display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:6 }}><span style={{ color:'#475569' }}>Live rate</span><span style={{ color:'#94a3b8',fontWeight:600 }}>1 USD = {depositRate} KES</span></div>
+                <div style={{ display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:6 }}><span style={{ color:'#475569',display:'flex',alignItems:'center',gap:6 }}><span style={{ width:6,height:6,borderRadius:'50%',background:'#00e67a',display:'inline-block',animation:'blink 1.5s infinite' }}/>Live rate</span><span style={{ color:'#94a3b8',fontWeight:600 }}>1 USD = {depositRate} KES</span></div>
                 <div style={{ display:'flex',justifyContent:'space-between',fontSize:14 }}><span style={{ color:'#475569' }}>You receive</span><span style={{ fontWeight:800,color:'#00e67a',fontSize:16,fontFamily:'Space Grotesk,sans-serif' }}>${amount2 ? (parseFloat(amount2)/depositRate).toFixed(2) : '0.00'} USD</span></div>
               </div>
               {depositMsg2 && <div style={{ padding:'11px 14px',borderRadius:11,background:depositMsg2.ok?'rgba(0,230,122,0.07)':'rgba(248,113,113,0.07)',border:`1px solid ${depositMsg2.ok?'rgba(0,230,122,0.2)':'rgba(248,113,113,0.2)'}`,color:depositMsg2.ok?'#00e67a':'#f87171',fontSize:13,lineHeight:1.55 }}>{depositMsg2.text}</div>}
-              <button onClick={handleDeposit2} disabled={depositLoading2} style={{ padding:'14px 0',borderRadius:13,background:depositLoading2?'rgba(0,230,122,0.2)':'linear-gradient(135deg,#00e67a,#00b85c)',border:'none',color:'#0a0b14',fontWeight:800,fontSize:15,cursor:depositLoading2?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:9,boxShadow:depositLoading2?'none':'0 4px 20px rgba(0,230,122,0.25)' }}>{depositLoading2 ? 'Processing...' : '📱 Send M-Pesa Request'}</button>
+              <button onClick={handleDeposit2} disabled={depositLoading2} style={{ padding:'14px 0',borderRadius:13,background:depositLoading2?'rgba(0,230,122,0.2)':'linear-gradient(135deg,#00e67a,#00b85c)',border:'none',color:'#0a0b14',fontWeight:800,fontSize:15,cursor:depositLoading2?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:9,boxShadow:depositLoading2?'none':'0 4px 20px rgba(0,230,122,0.25)' }}>
+                {depositLoading2 ? <><div style={{ width:17,height:17,border:'2.5px solid rgba(10,11,20,0.3)',borderTopColor:'#0a0b14',borderRadius:'50%',animation:'spin 0.8s linear infinite' }}/>Processing...</> : '📱 Send M-Pesa Request'}
+              </button>
+              <p style={{ textAlign:'center',fontSize:11,color:'#1e293b' }}>Powered by <a href="https://app.abepayy.com" target="_blank" rel="noopener noreferrer" style={{ color:'#00e67a',textDecoration:'none',fontWeight:600 }}>AbePay</a></p>
             </div>
           </div>
         </div>
@@ -289,9 +295,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div style={{ display:'flex',flexDirection:'column',gap:10,marginBottom:20 }}>
               {[
-                { icon:'🛡️',color:'#6366f1',t:'Step 1 — Go to Deriv and withdraw',d:'Go to Deriv.com and log in. Click Portfolio → Withdraw → Payment Agent. Enter verification code from email, search for "Traders Lounge", enter amount and complete.' },
+                { icon:'🛡️',color:'#6366f1',t:'Step 1 — Go to Deriv and withdraw',d:'Go to Deriv.com and log in. Click Portfolio → Withdraw → Payment Agent. A verification code will be sent to your email. Enter it, then search for and select "Traders Lounge", enter the amount and complete the withdrawal request.' },
                 { icon:'⚡',color:'#f59e0b',t:'Step 2 — We detect it automatically',d:'AbePay securely processes your withdrawal and sends the KES equivalent instantly to your registered M-Pesa number.' },
-                { icon:'📱',color:'#00e67a',t:'Step 3 — M-Pesa sent within minutes',d:`Once your withdrawal is matched, the KES amount is sent directly to your M-Pesa number. Rate: 1 USD = ${withdrawRate} KES.` },
+                { icon:'📱',color:'#00e67a',t:'Step 3 — M-Pesa sent within minutes',d:`Once your withdrawal is matched, the KES amount is sent directly to your M-Pesa number. Rate: 1 USD = ${withdrawRate} KES. No further action needed — contact us on WhatsApp if you have any issue.` },
               ].map((s,i)=>(
                 <div key={i} style={{ display:'flex',gap:12,padding:'13px 14px',borderRadius:13,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)' }}>
                   <div style={{ width:30,height:30,borderRadius:9,background:`${s.color}18`,border:`1px solid ${s.color}30`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0 }}>{s.icon}</div>
@@ -299,7 +305,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
               ))}
             </div>
-            <a href="https://home.deriv.com/dashboard/withdraw" target="_blank" rel="noopener noreferrer" style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'14px 0',borderRadius:13,background:'linear-gradient(135deg,#6366f1,#4f46e5)',color:'#fff',fontWeight:800,fontSize:16,textDecoration:'none',boxShadow:'0 4px 20px rgba(99,102,241,0.3)' }}>Open Deriv.com<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>
+            <a href="https://home.deriv.com/dashboard/withdraw" target="_blank" rel="noopener noreferrer" style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'14px 0',borderRadius:13,background:'linear-gradient(135deg,#6366f1,#4f46e5)',color:'#fff',fontWeight:800,fontSize:16,textDecoration:'none',boxShadow:'0 4px 20px rgba(99,102,241,0.3)' }}>
+              Open Deriv.com
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+
+            <div style={{ marginTop:16, padding:'12px 14px', borderRadius:12, background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.15)' }}>
+              <p style={{ fontSize:12, color:'#f59e0b', lineHeight:1.6, marginBottom:8 }}>
+                <strong>⚠️ First time withdrawing?</strong> You must have an AbePay account with your M-Pesa number saved before your withdrawal can be processed automatically.
+              </p>
+              <a href="https://app.abepayy.com" target="_blank" rel="noopener noreferrer"
+                style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.2)',color:'#f59e0b',fontSize:12,fontWeight:700,textDecoration:'none' }}>
+                Register on AbePay →
+              </a>
+            </div>
+            <p style={{ textAlign:'center',fontSize:11,color:'#1e293b',marginTop:14 }}>Having trouble? <a href="https://wa.me/254793789350" target="_blank" rel="noopener noreferrer" style={{ color:'#00e67a',textDecoration:'none',fontWeight:600 }}>Contact us on WhatsApp</a></p>
           </div>
         </div>
       )}
