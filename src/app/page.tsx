@@ -94,23 +94,20 @@ export default function LandingPage() {
     try {
       const rawPhone = phone.trim().replace(/\D/g, '');
       const formatted = rawPhone.startsWith('0') ? '254' + rawPhone.slice(1) : rawPhone.startsWith('254') ? rawPhone : '254' + rawPhone;
-      const res = await fetch(`https://app.abepayy.com/api/mpesa/initiate`, {
+      const res = await fetch(`${ABEPAY_URL}/api/mpesa/initiate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ crAccount: crAccount.trim().toUpperCase(), phone: formatted, amount: kes }),
       });
-      if (!res.ok && res.status !== 400 && res.status !== 429) {
-        throw new Error('Network error. Please check your connection and try again.');
-      }
       const data = await res.json();
       if (data.success) {
         setDepositMsg({ text: '✅ M-Pesa prompt sent! Check your phone and enter your PIN to complete.', ok: true });
         setAmount('');
       } else {
-        setDepositMsg({ text: data.error || 'Failed. Please try again.', ok: false });
+        setDepositMsg({ text: data.error || 'Failed to initiate deposit. Please try again.', ok: false });
       }
-    } catch (err: any) {
-      setDepositMsg({ text: err?.message || 'Network error. Please check your connection and try again.', ok: false });
+    } catch {
+      setDepositMsg({ text: 'Network error. Please check your connection and try again.', ok: false });
     }
     setDepositLoading(false);
   };
@@ -323,8 +320,8 @@ export default function LandingPage() {
                 Register on AbePay →
               </a>
             </div>
-            <p style={{ textAlign:'center',fontSize:11,color:'#1e293b',marginTop:10 }}>
-              Having trouble? <a href="https://wa.me/254793789350" target="_blank" rel="noopener noreferrer" style={{ color:'#00e67a',textDecoration:'none',fontWeight:600 }}>Contact us on WhatsApp</a>
+            <p style={{ textAlign: 'center', fontSize: 11, color: '#1e293b', marginTop: 10 }}>
+              Having trouble? <a href="https://wa.me/254793789350" target="_blank" rel="noopener noreferrer" style={{ color: '#00e67a', textDecoration: 'none', fontWeight: 600 }}>Contact us on WhatsApp</a>
             </p>
           </div>
         </div>

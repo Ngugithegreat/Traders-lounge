@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 
@@ -15,6 +15,19 @@ const NAV = [
   { href: '/dashboard/reports', label: 'Reports', icon: '📈' },
 ];
 
+const ABEPAY = 'https://app.abepayy.com';
+
+type ModalType = 'deposit' | 'withdraw' | null;
+type DepositStatus = 'idle' | 'submitting' | 'pending' | 'success' | 'cancelled' | 'failed';
+
+interface StatusState {
+  status: DepositStatus;
+  message: string;
+  mpesaRef?: string;
+  amount?: string;
+  checkoutId?: string;
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -28,16 +41,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [accountsOpen, setAccountsOpen] = useState(false);
   const [allAccounts, setAllAccounts] = useState<any[]>([]);
 
-  // New funding states
-  const [modal, setModal] = useState<'deposit'|'withdraw'|null>(null);
+  // Deposit/Withdraw modal
+  const [modal, setModal] = useState<ModalType>(null);
   const [depositRate, setDepositRate] = useState(131);
   const [withdrawRate, setWithdrawRate] = useState(124);
-  const [minDepositKes, setMinDepositKes] = useState(650);
-  const [crAccount2, setCrAccount2] = useState('');
-  const [phone2, setPhone2] = useState('');
-  const [amount2, setAmount2] = useState('');
-  const [depositLoading2, setDepositLoading2] = useState(false);
-  const [depositMsg2, setDepositMsg2] = useState<{text:string;ok:boolean}|null>(null);
+  const [minKes, setMinKes] = useState(650);
+
+  // Deposit form
+  const [crAccount, setCrAccount] = useState('');
+  const [phone, setPhone] = useState('');
+  const [amount, setAmount] = useState('');
+  const [statusState, setStatusState] = useState<StatusState>({ status: 'idle', message: '' });
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
+  const pollCountRef = useRef(0);
 
   const fetchBal = useCallback(async (acct: string) => {
     try {
@@ -55,6 +71,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     if (!acct || !token) { router.push('/'); return; }
 
+    // Check if token is expired — if so, clear and re-auth
     if (expiresAt && Date.now() > parseInt(expiresAt)) {
       ['tl_account','tl_token','tl_name','tl_virtual','tl_all_accounts','tl_token_expires'].forEach(k => localStorage.removeItem(k));
       router.push('/');
@@ -70,62 +87,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } catch (_) {}
     fetchBal(acct);
     const iv = setInterval(() => fetchBal(acct), 30000);
+    return () => clearInterval(iv);
+  }, [router, fetchBal, pathname]);
 
-    // Fetch live rates
-    fetch('https://app.abepayy.com/api/widget/rates')
+  // Fetch live rates on mount
+  useEffect(() => {
+    fetch(`${ABEPAY}/api/widget/rates`)
       .then(r => r.json())
       .then(d => {
         if (d.depositRate) setDepositRate(d.depositRate);
         if (d.withdrawRate) setWithdrawRate(d.withdrawRate);
-        if (d.minDeposit && d.depositRate) setMinDepositKes(Math.ceil(d.minDeposit * d.depositRate));
-      })
-      .catch(() => {});
-
-    return () => clearInterval(iv);
-  }, [router, fetchBal]);
-
-  const handleDeposit2 = async () => {
-    if (!crAccount2.trim() || !phone2.trim() || !amount2.trim()) {
-      setDepositMsg2({ text: 'Please fill in all fields.', ok: false }); return;
-    }
-    const kes = parseFloat(amount2);
-    if (isNaN(kes) || kes < minDepositKes) {
-      setDepositMsg2({ text: `Minimum deposit is KES ${minDepositKes.toLocaleString()}.`, ok: false }); return;
-    }
-    setDepositLoading2(true); setDepositMsg2(null);
-    try {
-      const rawPhone = phone2.trim().replace(/\D/g, '');
-      const formatted = rawPhone.startsWith('0') ? '254' + rawPhone.slice(1) : rawPhone.startsWith('254') ? rawPhone : '254' + rawPhone;
-      const res = await fetch(`https://app.abepayy.com/api/mpesa/initiate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ crAccount: crAccount2.trim().toUpperCase(), phone: formatted, amount: kes }),
-      });
-      if (!res.ok && res.status !== 400 && res.status !== 429) {
-        throw new Error('Network error. Please check your connection and try again.');
-      }
-      const data = await res.json();
-      if (data.success) {
-        setDepositMsg2({ text: '✅ M-Pesa prompt sent! Check your phone and enter your PIN to complete.', ok: true });
-        setAmount2('');
-      } else {
-        setDepositMsg2({ text: data.error || 'Failed. Please try again.', ok: false });
-      }
-    } catch (err: any) {
-      setDepositMsg2({ text: err?.message || 'Network error. Please check your connection and try again.', ok: false });
-    }
-    setDepositLoading2(false);
-  };
+        if (d.minDeposit && d.depositRate) setMinKes(Math.ceil(d.minDeposit * d.depositRate));
+      }).catch(() => {});
+  }, []);
 
   const switchAccount = (acct: any) => {
     localStorage.setItem('tl_account', acct.loginid);
     localStorage.setItem('tl_token', acct.token);
     localStorage.setItem('tl_virtual', String(acct.is_virtual));
-    setAccount(acct.loginid);
-    setIsVirtual(acct.is_virtual);
-    setBalance(null);
-    fetchBal(acct.loginid);
-    setAccountsOpen(false);
+    setAccount(acct.loginid); setIsVirtual(acct.is_virtual); setBalance(null);
+    fetchBal(acct.loginid); setAccountsOpen(false);
   };
 
   const logout = () => {
@@ -135,8 +116,225 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const isActive = (href: string, exact?: boolean) => exact ? pathname === href : pathname.startsWith(href);
 
+  const openModal = (type: ModalType) => {
+    setModal(type);
+    setStatusState({ status: 'idle', message: '' });
+    setCrAccount(''); setPhone(''); setAmount('');
+    if (pollRef.current) clearInterval(pollRef.current);
+  };
+
+  const closeModal = () => {
+    setModal(null);
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollCountRef.current = 0;
+    setStatusState({ status: 'idle', message: '' });
+  };
+
+  // Poll for deposit status
+  const startPolling = (checkoutId: string) => {
+    pollCountRef.current = 0;
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = setInterval(async () => {
+      pollCountRef.current++;
+      if (pollCountRef.current > 24) { // 2 minutes max
+        clearInterval(pollRef.current!);
+        setStatusState(s => s.status === 'pending' ? {
+          status: 'failed',
+          message: 'No payment received within 2 minutes. Please try again or check your M-Pesa.',
+          checkoutId: s.checkoutId,
+        } : s);
+        return;
+      }
+      try {
+        const r = await fetch(`${ABEPAY}/api/mpesa/status?checkoutRequestID=${checkoutId}`);
+        if (!r.ok) return;
+        const d = await r.json();
+        if (d.status === 'completed' || d.status === 'success') {
+          clearInterval(pollRef.current!);
+          fetchBal(account); // refresh balance
+          setStatusState({
+            status: 'success',
+            message: `Deposit confirmed! KES ${d.amount || amount} received.`,
+            mpesaRef: d.mpesaRef || d.receipt,
+            amount: d.amount,
+          });
+        } else if (d.status === 'cancelled' || d.status === 'failed' || d.resultCode === '1032') {
+          clearInterval(pollRef.current!);
+          setStatusState({
+            status: 'cancelled',
+            message: d.resultDesc || 'Transaction was cancelled. No money was deducted.',
+          });
+        }
+      } catch (_) {}
+    }, 5000);
+  };
+
+  const handleDeposit = async () => {
+    if (!crAccount.trim() || !phone.trim() || !amount.trim()) {
+      setStatusState({ status: 'failed', message: 'Please fill in all fields.' }); return;
+    }
+    const kes = parseFloat(amount);
+    if (isNaN(kes) || kes < minKes) {
+      setStatusState({ status: 'failed', message: `Minimum deposit is KES ${minKes.toLocaleString()}.` }); return;
+    }
+    setStatusState({ status: 'submitting', message: 'Connecting to M-Pesa...' });
+    try {
+      const raw = phone.trim().replace(/\D/g, '');
+      const formatted = raw.startsWith('0') ? '254' + raw.slice(1) : raw.startsWith('254') ? raw : '254' + raw;
+      const res = await fetch(`${ABEPAY}/api/mpesa/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crAccount: crAccount.trim().toUpperCase(), phone: formatted, amount: kes }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStatusState({
+          status: 'pending',
+          message: 'STK push sent! Check your phone and enter your M-Pesa PIN.',
+          checkoutId: data.checkoutRequestID,
+        });
+        if (data.checkoutRequestID) startPolling(data.checkoutRequestID);
+      } else {
+        setStatusState({ status: 'failed', message: data.error || 'Failed to send M-Pesa request. Please try again.' });
+      }
+    } catch (e: any) {
+      setStatusState({ status: 'failed', message: 'Network error. Please check your connection and try again.' });
+    }
+  };
+
+  const kesAmt = parseFloat(amount) || 0;
+  const usdAmt = kesAmt > 0 ? (kesAmt / depositRate).toFixed(2) : '0.00';
+  const isProcessing = statusState.status === 'submitting' || statusState.status === 'pending';
+
+  // ── Shared styles ──
+  const INP: React.CSSProperties = {
+    width: '100%', padding: '13px 14px',
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.09)',
+    borderRadius: 12, color: '#e2e8f0', fontSize: 15,
+    outline: 'none', fontFamily: 'Inter,sans-serif',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+    boxSizing: 'border-box' as const,
+  };
+  const LBL: React.CSSProperties = {
+    fontSize: 11, color: '#475569', fontWeight: 700,
+    display: 'block', marginBottom: 8,
+    textTransform: 'uppercase' as const, letterSpacing: '0.08em',
+  };
+
   return (
-    <div style={{ minHeight: '100vh', background: '#0d0e1a', color: '#e2e8f0', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: '#080910', color: '#e2e8f0', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, system-ui, sans-serif' }}>
+
+      {/* DEPOSIT MODAL */}
+      {modal === 'deposit' && (
+        <div style={{ position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:16,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(12px)' }} onClick={closeModal}>
+          <div style={{ position:'relative',background:'linear-gradient(160deg,#131525,#0e1020)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:24,padding:28,width:'100%',maxWidth:420,boxShadow:'0 32px 80px rgba(0,0,0,0.8)',animation:'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24 }}>
+              <div style={{ display:'flex',alignItems:'center',gap:12 }}>
+                <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,#00e67a,#00b85c)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 20px rgba(0,230,122,0.3)' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0b14" strokeWidth="2.5"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="21" x2="12" y2="3"/></svg>
+                </div>
+                <div>
+                  <h3 style={{ fontFamily:'Space Grotesk,sans-serif',fontWeight:800,fontSize:20,marginBottom:2 }}>Deposit Funds</h3>
+                  <p style={{ color:'#475569',fontSize:12 }}>Instant · Secure · Zero fees</p>
+                </div>
+              </div>
+              <button onClick={closeModal} style={{ width:32,height:32,borderRadius:10,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:'#64748b',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
+            </div>
+            {statusState.status === 'idle' ? (
+              <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
+                <div style={{ display:'flex',borderRadius:12,overflow:'hidden',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',padding:3,gap:3 }}>
+                  <button style={{ flex:1,padding:'9px 0',background:'linear-gradient(135deg,#00e67a,#00b85c)',border:'none',color:'#0a0b14',fontWeight:700,fontSize:13,cursor:'default',borderRadius:9 }}>⬇️ Deposit</button>
+                  <button onClick={()=>{ closeModal(); setTimeout(() => setModal('withdraw'), 50); }} style={{ flex:1,padding:'9px 0',background:'none',border:'none',color:'#64748b',fontWeight:600,fontSize:13,cursor:'pointer',borderRadius:9 }}>⬆️ Withdraw</button>
+                </div>
+                <div>
+                  <label style={LBL}>Deriv Account (CR Number)</label>
+                  <input value={crAccount} onChange={e=>setCrAccount(e.target.value)} placeholder="e.g. CR1234567" style={INP} />
+                </div>
+                <div>
+                  <label style={LBL}>M-Pesa Phone Number</label>
+                  <div style={{ position:'relative',display:'flex',alignItems:'center' }}>
+                    <div style={{ position:'absolute',left:14,color:'#475569',fontSize:14,fontWeight:600,pointerEvents:'none',display:'flex',alignItems:'center',gap:5 }}><span style={{ fontSize:16 }}>🇰🇪</span> +254</div>
+                    <input value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,''))} placeholder="7XXXXXXXX" style={{ ...INP, paddingLeft:88 }} />
+                  </div>
+                </div>
+                <div>
+                  <label style={LBL}>Amount (KES)</label>
+                  <div style={{ position:'relative',display:'flex',alignItems:'center' }}>
+                    <div style={{ position:'absolute',left:14,color:'#475569',fontSize:13,fontWeight:600,pointerEvents:'none' }}>KES</div>
+                    <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder={`Min KES ${minKes.toLocaleString()}`} style={{ ...INP, paddingLeft:52 }} />
+                  </div>
+                </div>
+                <div style={{ padding:'12px 14px',borderRadius:12,background:'rgba(0,230,122,0.04)',border:'1px solid rgba(0,230,122,0.1)' }}>
+                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:6 }}><span style={{ color:'#475569',display:'flex',alignItems:'center',gap:6 }}><span style={{ width:6,height:6,borderRadius:'50%',background:'#00e67a',display:'inline-block',animation:'blink 1.5s infinite' }}/>Live rate</span><span style={{ color:'#94a3b8',fontWeight:600 }}>1 USD = {depositRate} KES</span></div>
+                  <div style={{ display:'flex',justifyContent:'space-between',fontSize:14 }}><span style={{ color:'#475569' }}>You receive</span><span style={{ fontWeight:800,color:'#00e67a',fontSize:16,fontFamily:'Space Grotesk,sans-serif' }}>${usdAmt} USD</span></div>
+                </div>
+                <button onClick={handleDeposit} disabled={isProcessing} style={{ padding:'14px 0',borderRadius:13,background:isProcessing?'rgba(0,230,122,0.2)':'linear-gradient(135deg,#00e67a,#00b85c)',border:'none',color:'#0a0b14',fontWeight:800,fontSize:15,cursor:isProcessing?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:9 }}>
+                  {isProcessing ? <><div style={{ width:17,height:17,border:'2.5px solid rgba(10,11,20,0.3)',borderTopColor:'#0a0b14',borderRadius:'50%',animation:'spinSmooth 0.8s linear infinite' }}/>Processing...</> : '📱 Send M-Pesa Request'}
+                </button>
+              </div>
+            ) : (
+              <div style={{ textAlign:'center', padding:'20px 0' }}>
+                <div style={{ fontSize:40, marginBottom:16 }}>
+                  {statusState.status === 'success' ? '✅' : statusState.status === 'pending' ? '⏳' : '⚠️'}
+                </div>
+                <h4 style={{ fontWeight:700, marginBottom:8 }}>{statusState.status.toUpperCase()}</h4>
+                <p style={{ color:'#64748b', fontSize:14, lineHeight:1.6 }}>{statusState.message}</p>
+                {statusState.mpesaRef && <p style={{ marginTop:12, fontFamily:'monospace', color:'#00e67a' }}>Ref: {statusState.mpesaRef}</p>}
+                <button onClick={() => setStatusState({ status:'idle', message:'' })} style={{ marginTop:24, padding:'10px 24px', borderRadius:10, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'#e2e8f0', cursor:'pointer' }}>Back</button>
+              </div>
+            )}
+            <p style={{ textAlign:'center',fontSize:11,color:'#1e293b',marginTop:14 }}>Powered by <a href="https://app.abepayy.com" target="_blank" rel="noopener noreferrer" style={{ color:'#00e67a',textDecoration:'none',fontWeight:600 }}>AbePay</a></p>
+          </div>
+        </div>
+      )}
+
+      {/* WITHDRAW MODAL */}
+      {modal === 'withdraw' && (
+        <div style={{ position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:16,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(12px)' }} onClick={closeModal}>
+          <div style={{ position:'relative',background:'linear-gradient(160deg,#131525,#0e1020)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:24,padding:28,width:'100%',maxWidth:440,boxShadow:'0 32px 80px rgba(0,0,0,0.8)',animation:'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24 }}>
+              <div style={{ display:'flex',alignItems:'center',gap:12 }}>
+                <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,#6366f1,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 20px rgba(99,102,241,0.3)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="16 7 12 3 8 7"/><line x1="12" y1="3" x2="12" y2="21"/></svg></div>
+                <div><h3 style={{ fontFamily:'Space Grotesk,sans-serif',fontWeight:800,fontSize:20,marginBottom:2 }}>Withdraw to M-Pesa</h3><p style={{ color:'#475569',fontSize:12 }}>CR Account · Automatic payout</p></div>
+              </div>
+              <button onClick={closeModal} style={{ width:32,height:32,borderRadius:10,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:'#64748b',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
+            </div>
+            <div style={{ display:'flex',marginBottom:20,borderRadius:12,overflow:'hidden',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',padding:3,gap:3 }}>
+              <button onClick={() => { closeModal(); setTimeout(() => setModal('deposit'), 50); }} style={{ flex:1,padding:'9px 0',background:'none',border:'none',color:'#64748b',fontWeight:600,fontSize:13,cursor:'pointer',borderRadius:9 }}>⬇️ Deposit</button>
+              <button style={{ flex:1,padding:'9px 0',background:'linear-gradient(135deg,#6366f1,#4f46e5)',border:'none',color:'#fff',fontWeight:700,fontSize:13,cursor:'default',borderRadius:9 }}>⬆️ Withdraw</button>
+            </div>
+            <div style={{ display:'flex',flexDirection:'column',gap:10,marginBottom:20 }}>
+              {[
+                { icon:'🛡️',color:'#6366f1',t:'Step 1 — Go to Deriv and withdraw',d:'Go to Deriv.com and log in. Click Portfolio → Withdraw → Payment Agent. A verification code will be sent to your email. Enter it, then search for and select "Traders Lounge", enter the amount and complete the withdrawal request.' },
+                { icon:'⚡',color:'#f59e0b',t:'Step 2 — We detect it automatically',d:'AbePay securely processes your withdrawal and sends the KES equivalent instantly to your registered M-Pesa number.' },
+                { icon:'📱',color:'#00e67a',t:'Step 3 — M-Pesa sent within minutes',d:`Once your withdrawal is matched, the KES amount is sent directly to your M-Pesa number. Rate: 1 USD = ${withdrawRate} KES. No further action needed — contact us on WhatsApp if you have any issue.` },
+              ].map((s,i)=>(
+                <div key={i} style={{ display:'flex',gap:12,padding:'13px 14px',borderRadius:13,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ width:30,height:30,borderRadius:9,background:`${s.color}18`,border:`1px solid ${s.color}30`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0 }}>{s.icon}</div>
+                  <div><p style={{ fontWeight:700,fontSize:13,color:'#e2e8f0',marginBottom:4 }}>{s.t}</p><p style={{ fontSize:12,color:'#64748b',lineHeight:1.6 }}>{s.d}</p></div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop:16, padding:'12px 14px', borderRadius:12, background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.15)' }}>
+              <p style={{ fontSize:12, color:'#f59e0b', lineHeight:1.6, marginBottom:8 }}>
+                <strong>⚠️ First time withdrawing?</strong> You must have an AbePay account with your M-Pesa number saved before your withdrawal can be processed automatically.
+              </p>
+              <a href="https://app.abepayy.com" target="_blank" rel="noopener noreferrer"
+                style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.2)',color:'#f59e0b',fontSize:12,fontWeight:700,textDecoration:'none' }}>
+                Register on AbePay →
+              </a>
+            </div>
+            <a href="https://home.deriv.com/dashboard/withdraw" target="_blank" rel="noopener noreferrer" style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'14px 0',borderRadius:13,background:'linear-gradient(135deg,#6366f1,#4f46e5)',color:'#fff',fontWeight:800,fontSize:16,textDecoration:'none',boxShadow:'0 4px 20px rgba(99,102,241,0.3)' }}>
+              Open Deriv.com
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+            <p style={{ textAlign:'center',fontSize:11,color:'#1e293b',marginTop:14 }}>Having trouble? <a href="https://wa.me/254793789350" target="_blank" rel="noopener noreferrer" style={{ color:'#00e67a',textDecoration:'none',fontWeight:600 }}>Contact us on WhatsApp</a></p>
+          </div>
+        </div>
+      )}
+
+      {/* HEADER */}
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(10,11,20,0.98)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 52, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -145,21 +343,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
             <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
               <div style={{ width: 30, height: 30, borderRadius: 8, background: 'linear-gradient(135deg, #00e67a, #00b85c)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 12px rgba(0,230,122,0.3)' }}>
-                <span style={{ color: '#0a0b14', fontWeight: 900, fontSize: 13, fontFamily: 'Space Grotesk,sans-serif' }}>TL</span>
+                <span style={{ color: '#0a0b14', fontWeight: 900, fontSize: 13, fontFamily: 'Space Grotesk, sans-serif' }}>TL</span>
               </div>
-              <span style={{ fontFamily: 'Space Grotesk,sans-serif', fontWeight: 700, fontSize: 16, color: '#e2e8f0', letterSpacing: '-0.3px' }}>Traders Lounge</span>
+              <span style={{ fontFamily: 'Space Grotesk, sans-serif', fontWeight: 700, fontSize: 16, color: '#e2e8f0', letterSpacing: '-0.3px' }}>Traders Lounge</span>
             </Link>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <button onClick={() => { setModal('deposit'); setCrAccount2(''); setPhone2(''); setAmount2(''); setDepositMsg2(null); }}
+            <button onClick={() => openModal('deposit')}
               style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:10,background:'linear-gradient(135deg,#00e67a,#00b85c)',border:'none',color:'#0a0b14',fontWeight:700,fontSize:13,cursor:'pointer',boxShadow:'0 0 14px rgba(0,230,122,0.2)',transition:'transform 0.15s' }}
               onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.04)')}
               onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="21" x2="12" y2="3"/></svg>
               Deposit
             </button>
-            <button onClick={() => setModal('withdraw')}
+            <button onClick={() => openModal('withdraw')}
               style={{ display:'flex',alignItems:'center',gap:6,padding:'8px 16px',borderRadius:10,background:'rgba(99,102,241,0.1)',border:'1px solid rgba(99,102,241,0.22)',color:'#818cf8',fontWeight:700,fontSize:13,cursor:'pointer',transition:'transform 0.15s' }}
               onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.04)')}
               onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')}>
@@ -247,87 +445,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <main style={{ flex: 1, maxWidth: 1600, margin: '0 auto', width: '100%', padding: '20px 16px' }}>{children}</main>
 
-      {modal === 'deposit' && (
-        <div style={{ position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:16,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(12px)' }} onClick={()=>setModal(null)}>
-          <div style={{ position:'relative',background:'linear-gradient(160deg,#131525,#0e1020)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:24,padding:28,width:'100%',maxWidth:420,boxShadow:'0 32px 80px rgba(0,0,0,0.8)',animation:'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }} onClick={e=>e.stopPropagation()}>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24 }}>
-              <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-                <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,#00e67a,#00b85c)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 20px rgba(0,230,122,0.3)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0b14" strokeWidth="2.5"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="21" x2="12" y2="3"/></svg></div>
-                <div><h3 style={{ fontFamily:'Space Grotesk,sans-serif',fontWeight:800,fontSize:20,marginBottom:2 }}>Deposit Funds</h3><p style={{ color:'#475569',fontSize:12 }}>Instant · Secure · Zero fees</p></div>
-              </div>
-              <button onClick={()=>setModal(null)} style={{ width:32,height:32,borderRadius:10,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:'#64748b',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
-            </div>
-            <div style={{ display:'flex',marginBottom:20,borderRadius:12,overflow:'hidden',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',padding:3,gap:3 }}>
-              <button style={{ flex:1,padding:'9px 0',background:'linear-gradient(135deg,#00e67a,#00b85c)',border:'none',color:'#0a0b14',fontWeight:700,fontSize:13,cursor:'default',borderRadius:9 }}>⬇️ Deposit</button>
-              <button onClick={()=>setModal('withdraw')} style={{ flex:1,padding:'9px 0',background:'none',border:'none',color:'#64748b',fontWeight:600,fontSize:13,cursor:'pointer',borderRadius:9 }}>⬆️ Withdraw</button>
-            </div>
-            <div style={{ display:'flex',flexDirection:'column',gap:14 }}>
-              <div><label style={{ fontSize:11,color:'#475569',fontWeight:700,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.08em' }}>Deriv Account (CR Number)</label><input value={crAccount2} onChange={e=>setCrAccount2(e.target.value)} placeholder="e.g. CR1234567" style={{ width:'100%',padding:'12px 14px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:12,color:'#e2e8f0',fontSize:15,outline:'none' }} /></div>
-              <div><label style={{ fontSize:11,color:'#475569',fontWeight:700,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.08em' }}>M-Pesa Phone Number</label><div style={{ position:'relative',display:'flex',alignItems:'center' }}><div style={{ position:'absolute',left:14,color:'#475569',fontSize:14,fontWeight:600,pointerEvents:'none',display:'flex',alignItems:'center',gap:5 }}><span style={{ fontSize:16 }}>🇰🇪</span> +254</div><input value={phone2} onChange={e=>setPhone2(e.target.value.replace(/\D/g,''))} placeholder="7XXXXXXXX" style={{ width:'100%',padding:'12px 14px',paddingLeft:88,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:12,color:'#e2e8f0',fontSize:15,outline:'none' }} /></div></div>
-              <div><label style={{ fontSize:11,color:'#475569',fontWeight:700,display:'block',marginBottom:7,textTransform:'uppercase',letterSpacing:'0.08em' }}>Amount (KES)</label><div style={{ position:'relative',display:'flex',alignItems:'center' }}><div style={{ position:'absolute',left:14,color:'#475569',fontSize:13,fontWeight:600,pointerEvents:'none' }}>KES</div><input type="number" value={amount2} onChange={e=>setAmount2(e.target.value)} placeholder={`Min KES ${minDepositKes.toLocaleString()}`} style={{ width:'100%',padding:'12px 14px',paddingLeft:52,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:12,color:'#e2e8f0',fontSize:15,outline:'none' }} /></div></div>
-              <div style={{ padding:'12px 14px',borderRadius:12,background:'rgba(0,230,122,0.04)',border:'1px solid rgba(0,230,122,0.1)' }}>
-                <div style={{ display:'flex',justifyContent:'space-between',fontSize:13,marginBottom:6 }}><span style={{ color:'#475569',display:'flex',alignItems:'center',gap:6 }}><span style={{ width:6,height:6,borderRadius:'50%',background:'#00e67a',display:'inline-block',animation:'blink 1.5s infinite' }}/>Live rate</span><span style={{ color:'#94a3b8',fontWeight:600 }}>1 USD = {depositRate} KES</span></div>
-                <div style={{ display:'flex',justifyContent:'space-between',fontSize:14 }}><span style={{ color:'#475569' }}>You receive</span><span style={{ fontWeight:800,color:'#00e67a',fontSize:16,fontFamily:'Space Grotesk,sans-serif' }}>${amount2 ? (parseFloat(amount2)/depositRate).toFixed(2) : '0.00'} USD</span></div>
-              </div>
-              {depositMsg2 && <div style={{ padding:'11px 14px',borderRadius:11,background:depositMsg2.ok?'rgba(0,230,122,0.07)':'rgba(248,113,113,0.07)',border:`1px solid ${depositMsg2.ok?'rgba(0,230,122,0.2)':'rgba(248,113,113,0.2)'}`,color:depositMsg2.ok?'#00e67a':'#f87171',fontSize:13,lineHeight:1.55 }}>{depositMsg2.text}</div>}
-              <button onClick={handleDeposit2} disabled={depositLoading2} style={{ padding:'14px 0',borderRadius:13,background:depositLoading2?'rgba(0,230,122,0.2)':'linear-gradient(135deg,#00e67a,#00b85c)',border:'none',color:'#0a0b14',fontWeight:800,fontSize:15,cursor:depositLoading2?'not-allowed':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:9,boxShadow:depositLoading2?'none':'0 4px 20px rgba(0,230,122,0.25)' }}>
-                {depositLoading2 ? <><div style={{ width:17,height:17,border:'2.5px solid rgba(10,11,20,0.3)',borderTopColor:'#0a0b14',borderRadius:'50%',animation:'spin 0.8s linear infinite' }}/>Processing...</> : '📱 Send M-Pesa Request'}
-              </button>
-              <p style={{ textAlign:'center',fontSize:11,color:'#1e293b' }}>Powered by <a href="https://app.abepayy.com" target="_blank" rel="noopener noreferrer" style={{ color:'#00e67a',textDecoration:'none',fontWeight:600 }}>AbePay</a></p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {modal === 'withdraw' && (
-        <div style={{ position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',padding:16,background:'rgba(0,0,0,0.82)',backdropFilter:'blur(12px)' }} onClick={()=>setModal(null)}>
-          <div style={{ position:'relative',background:'linear-gradient(160deg,#131525,#0e1020)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:24,padding:28,width:'100%',maxWidth:440,boxShadow:'0 32px 80px rgba(0,0,0,0.8)',animation:'modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1) both' }} onClick={e=>e.stopPropagation()}>
-            <div style={{ display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:24 }}>
-              <div style={{ display:'flex',alignItems:'center',gap:12 }}>
-                <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,#6366f1,#4f46e5)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 20px rgba(99,102,241,0.3)' }}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"><polyline points="16 7 12 3 8 7"/><line x1="12" y1="3" x2="12" y2="21"/></svg></div>
-                <div><h3 style={{ fontFamily:'Space Grotesk,sans-serif',fontWeight:800,fontSize:20,marginBottom:2 }}>Withdraw to M-Pesa</h3><p style={{ color:'#475569',fontSize:12 }}>CR Account · Automatic payout</p></div>
-              </div>
-              <button onClick={()=>setModal(null)} style={{ width:32,height:32,borderRadius:10,background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',color:'#64748b',cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
-            </div>
-            <div style={{ display:'flex',marginBottom:20,borderRadius:12,overflow:'hidden',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',padding:3,gap:3 }}>
-              <button onClick={()=>setModal('deposit')} style={{ flex:1,padding:'9px 0',background:'none',border:'none',color:'#64748b',fontWeight:600,fontSize:13,cursor:'pointer',borderRadius:9 }}>⬇️ Deposit</button>
-              <button style={{ flex:1,padding:'9px 0',background:'linear-gradient(135deg,#6366f1,#4f46e5)',border:'none',color:'#fff',fontWeight:700,fontSize:13,cursor:'default',borderRadius:9 }}>⬆️ Withdraw</button>
-            </div>
-            <div style={{ display:'flex',flexDirection:'column',gap:10,marginBottom:20 }}>
-              {[
-                { icon:'🛡️',color:'#6366f1',t:'Step 1 — Go to Deriv and withdraw',d:'Go to Deriv.com and log in. Click Portfolio → Withdraw → Payment Agent. A verification code will be sent to your email. Enter it, then search for and select "Traders Lounge", enter the amount and complete the withdrawal request.' },
-                { icon:'⚡',color:'#f59e0b',t:'Step 2 — We detect it automatically',d:'AbePay securely processes your withdrawal and sends the KES equivalent instantly to your registered M-Pesa number.' },
-                { icon:'📱',color:'#00e67a',t:'Step 3 — M-Pesa sent within minutes',d:`Once your withdrawal is matched, the KES amount is sent directly to your M-Pesa number. Rate: 1 USD = ${withdrawRate} KES. No further action needed — contact us on WhatsApp if you have any issue.` },
-              ].map((s,i)=>(
-                <div key={i} style={{ display:'flex',gap:12,padding:'13px 14px',borderRadius:13,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)' }}>
-                  <div style={{ width:30,height:30,borderRadius:9,background:`${s.color}18`,border:`1px solid ${s.color}30`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,flexShrink:0 }}>{s.icon}</div>
-                  <div><p style={{ fontWeight:700,fontSize:13,color:'#e2e8f0',marginBottom:4 }}>{s.t}</p><p style={{ fontSize:12,color:'#64748b',lineHeight:1.6 }}>{s.d}</p></div>
-                </div>
-              ))}
-            </div>
-            <a href="https://home.deriv.com/dashboard/withdraw" target="_blank" rel="noopener noreferrer" style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:8,padding:'14px 0',borderRadius:13,background:'linear-gradient(135deg,#6366f1,#4f46e5)',color:'#fff',fontWeight:800,fontSize:16,textDecoration:'none',boxShadow:'0 4px 20px rgba(99,102,241,0.3)' }}>
-              Open Deriv.com
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-            </a>
-
-            <div style={{ marginTop:16, padding:'12px 14px', borderRadius:12, background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.15)' }}>
-              <p style={{ fontSize:12, color:'#f59e0b', lineHeight:1.6, marginBottom:8 }}>
-                <strong>⚠️ First time withdrawing?</strong> You must have an AbePay account with your M-Pesa number saved before your withdrawal can be processed automatically.
-              </p>
-              <a href="https://app.abepayy.com" target="_blank" rel="noopener noreferrer"
-                style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.2)',color:'#f59e0b',fontSize:12,fontWeight:700,textDecoration:'none' }}>
-                Register on AbePay →
-              </a>
-            </div>
-            <p style={{ textAlign:'center',fontSize:11,color:'#1e293b',marginTop:14 }}>Having trouble? <a href="https://wa.me/254793789350" target="_blank" rel="noopener noreferrer" style={{ color:'#00e67a',textDecoration:'none',fontWeight:600 }}>Contact us on WhatsApp</a></p>
-          </div>
-        </div>
-      )}
-
       <style>{`
         .hide-scrollbar::-webkit-scrollbar{display:none}
         .hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
-        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes spinSmooth{to{transform:rotate(360deg)}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0.4}}
         @keyframes modalIn{from{opacity:0;transform:scale(0.93) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
         input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
