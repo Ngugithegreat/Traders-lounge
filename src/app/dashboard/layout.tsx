@@ -87,11 +87,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     } catch (_) {}
     fetchBal(acct);
     const iv = setInterval(() => fetchBal(acct), 30000);
-    return () => clearInterval(iv);
-  }, [router, fetchBal, pathname]);
-
-  // Fetch live rates on mount
-  useEffect(() => {
+    
+    // Fetch live rates
     fetch(`${ABEPAY}/api/widget/rates`)
       .then(r => r.json())
       .then(d => {
@@ -99,7 +96,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (d.withdrawRate) setWithdrawRate(d.withdrawRate);
         if (d.minDeposit && d.depositRate) setMinKes(Math.ceil(d.minDeposit * d.depositRate));
       }).catch(() => {});
-  }, []);
+
+    return () => clearInterval(iv);
+  }, [router, fetchBal, pathname]);
 
   const switchAccount = (acct: any) => {
     localStorage.setItem('tl_account', acct.loginid);
@@ -186,6 +185,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ crAccount: crAccount.trim().toUpperCase(), phone: formatted, amount: kes }),
       });
+      if (!res.ok && res.status !== 400 && res.status !== 429) {
+        throw new Error('Network error. Please check your connection and try again.');
+      }
       const data = await res.json();
       if (data.success) {
         setStatusState({
@@ -198,7 +200,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         setStatusState({ status: 'failed', message: data.error || 'Failed to send M-Pesa request. Please try again.' });
       }
     } catch (e: any) {
-      setStatusState({ status: 'failed', message: 'Network error. Please check your connection and try again.' });
+      setStatusState({ status: 'failed', message: e?.message || 'Network error. Please check your connection and try again.' });
     }
   };
 
@@ -206,7 +208,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const usdAmt = kesAmt > 0 ? (kesAmt / depositRate).toFixed(2) : '0.00';
   const isProcessing = statusState.status === 'submitting' || statusState.status === 'pending';
 
-  // ── Shared styles ──
   const INP: React.CSSProperties = {
     width: '100%', padding: '13px 14px',
     background: 'rgba(255,255,255,0.04)',

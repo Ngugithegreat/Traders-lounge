@@ -311,17 +311,9 @@ export default function LandingPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
             </a>
 
-            <div style={{ marginTop:16, padding:'12px 14px', borderRadius:12, background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.15)' }}>
-              <p style={{ fontSize:12, color:'#f59e0b', lineHeight:1.6, marginBottom:8 }}>
-                <strong>⚠️ First time withdrawing?</strong> You must have an AbePay account with your M-Pesa number saved before your withdrawal can be processed automatically.
-              </p>
-              <a href="https://app.abepayy.com" target="_blank" rel="noopener noreferrer"
-                style={{ display:'inline-flex',alignItems:'center',gap:6,padding:'8px 14px',borderRadius:8,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.2)',color:'#f59e0b',fontSize:12,fontWeight:700,textDecoration:'none' }}>
-                Register on AbePay →
-              </a>
-            </div>
-            <p style={{ textAlign: 'center', fontSize: 11, color: '#1e293b', marginTop: 10 }}>
-              Having trouble? <a href="https://wa.me/254793789350" target="_blank" rel="noopener noreferrer" style={{ color: '#00e67a', textDecoration: 'none', fontWeight: 600 }}>Contact us on WhatsApp</a>
+            <p style={{ textAlign: 'center', fontSize: 11, color: '#1e293b', marginTop: 14 }}>
+              Having trouble?{' '}
+              <a href="https://wa.me/254793789350" target="_blank" rel="noopener noreferrer" style={{ color: '#00e67a', textDecoration: 'none', fontWeight: 600 }}>Contact us on WhatsApp</a>
             </p>
           </div>
         </div>
